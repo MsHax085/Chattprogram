@@ -7,7 +7,7 @@
 
 %% Produce initial state
 initial_state(Nick, GUIName) ->
-    #client_st {gui = GUIName, nick = Nick}.
+    #client_st {gui = GUIName, nick = Nick, connected = false, serverRef = false}.
 
 %% ---------------------------------------------------------------------------
 
@@ -20,13 +20,23 @@ initial_state(Nick, GUIName) ->
 
 %% Connect to server
 handle(St, {connect, Server}) ->
-    Data = "hello?",
-    io:fwrite("Client is sending: ~p~n", [Data]),
-    ServerAtom = list_to_atom(Server),
-    Response = genserver:request(ServerAtom, Data),
-    io:fwrite("Client received: ~p~n", [Response]),
-    % {reply, ok, St} ;
-    {reply, {error, not_implemented, "Not implemented"}, St} ;
+%    Data = "hello?",
+%    io:fwrite("Client is sending: ~p~n", [Data]),
+%    ServerAtom = list_to_atom(Server),
+%    Response = genserver:request(ServerAtom, Data),
+%    io:fwrite("Client received: ~p~n", [Response]),
+%    % {reply, ok, St} ;
+%    {reply, {error, not_implemented, "Not implemented"}, St} ;
+	ServerAtom = list_to_atom(Server),
+	Response = genserver:request(ServerAtom, {conn, St#client_st.nick}),
+	case Response of
+		ok ->
+			ReplySt = St#client_st{connected = true, serverRef = ServerAtom},
+			{reply, ok, ReplySt};
+		failed ->
+			{reply, {error, is_connected, "User already connected"}, St}
+	end;
+	
 
 %% Disconnect from server
 handle(St, disconnect) ->
