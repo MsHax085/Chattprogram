@@ -6,8 +6,10 @@
 %% explained in the lecture about Generic server.
 
 % Produce initial state
+% Produce initial state
 initial_state(ServerName) ->
-    #server_st{}.
+  io:format("Server `~p' created.", [ServerName]),
+  #server_st{clients = dict:new(), channels = dict:new()}.
 
 %% ---------------------------------------------------------------------------
 
@@ -17,9 +19,20 @@ initial_state(ServerName) ->
 %% current state), performing the needed actions, and returning a tuple
 %% {reply, Reply, NewState}, where Reply is the reply to be sent to the client
 %% and NewState is the new state of the server.
+%% Connect client
 
-handle(St, Request) ->
-    io:fwrite("Server received: ~p~n", [Request]),
-    Response = "hi!",
-    io:fwrite("Server is sending: ~p~n", [Response]),
-    {reply, Response, St}.
+handle(St, {connect, Pid, Nick}) ->
+	case dict:is_key(Pid, St#server_st.clients) of
+		true ->
+			io:fwrite("User ~p already connected", [Nick]),
+			{reply, user_already_connected, St};
+		false ->
+			io:fwrite("User ~p connected to the server and was inserted to userlist~n", [Nick]),
+			{reply, ok, St#server_st{clients = dict:store(Pid, Nick, St#server_st.clients)}}
+	end;
+		
+handle(St, {disconnect, Pid, Nick}) ->
+	%% fixar , leave_channels_first, server_not_reached senare
+	io:fwrite("User ~p disconnected from the server and was removed from userlist~n", [Nick]),
+	{reply, ok, St#server_st{clients = dict:erase(Pid, St#server_st.clients)}}.
+	

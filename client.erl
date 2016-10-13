@@ -22,39 +22,39 @@ initial_state(Nick, GUIName) ->
 
 %% Connect to server
 handle(St, {connect, Server}) ->
-%    Data = "hello?",
-%    io:fwrite("Client is sending: ~p~n", [Data]),
-%    ServerAtom = list_to_atom(Server),
-%    Response = genserver:request(ServerAtom, Data),
-%    io:fwrite("Client received: ~p~n", [Response]),
-%    % {reply, ok, St} ;
-%    {reply, {error, not_implemented, "Not implemented"}, St} ;
-	ServerAtom = list_to_atom(Server),
-	Response = genserver:request(ServerAtom, {conn, St#client_st.nick}),
-	case Response of
-		ok ->
-			ReplySt = St#client_st{connected = true, serverRef = ServerAtom},
-			{reply, ok, ReplySt};
-		failed ->
-			{reply, {error, is_connected, "User already connected"}, St}
+	case St#client_st.connected of
+		true ->
+			{reply, {error, user_already_connected, "User already connected"}, St};
+		false ->
+			ServerAtom = list_to_atom(Server),
+			Response = genserver:request(ServerAtom, {connect, self(), St#client_st.nick}),
+			
+			case Response of
+				ok ->
+					{reply, ok, St#client_st{connected = true, serverRef = ServerAtom}};
+				_ ->
+					{reply, {error, server_not_reached, "Server not reached"}, St}
+			end
 	end;
 	
-
 %% Disconnect from server
 % Send disconnect request to server specified by the serverRef atom in
 % record #client_st of client St (client name).
 % If ok => Update record #client_st
 handle(St, disconnect) ->
-%    % {reply, ok, St} ;
-%    {reply, {error, not_implemented, "Not implemented"}, St} ;
-io:fwrite("server: ~p~n", [St#client_st.serverRef]),
-	Response = genserver:request(St#client_st.serverRef, {disconnect, St#client_st.nick}),
-	case Response of
-		ok ->
-			ReplySt = St#client_st{connected = false, serverRef = false},
-			{reply, ok, ReplySt};
-		_ ->
-			{reply, {error, is_connected, "Failed to disconnect"}, St}
+	case St#client_st.connected of
+		true ->
+			Response = genserver:request(St#client_st.serverRef, {disconnect, self(), St#client_st.nick}),
+			case Response of
+				ok ->
+					{reply, ok, St#client_st{connected = false, serverRef = false}};
+				leave_channels_first ->
+					{reply, {error, leave_channels_first , "Leave all channels first"}, St};
+				_ ->
+					{reply, {error, server_not_reached  , "Server not reached"}, St}
+			end;
+		false ->
+			{reply, {error, user_not_connected, "User not connected"}, St}
 	end;
 
 % Join channel
@@ -79,9 +79,12 @@ handle(St, whoami) ->
 
 %% Change nick
 handle(St, {nick, Nick}) ->
-	ReplySt = St#client_st{nick = Nick},
-    {reply, ok, ReplySt};
-    %{reply, {error, not_implemented, "Not implemented"}, St} ;
+	case St#client_st.connected of
+		true ->
+			{reply, {error, user_already_connected, "User already connected"}, St};
+		false ->
+			{reply, ok, St#client_st{nick = Nick}}
+	end;
 
 %% Incoming message
 handle(St = #client_st { gui = GUIName }, {incoming_msg, Channel, Name, Msg}) ->
