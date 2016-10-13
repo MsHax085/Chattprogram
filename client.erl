@@ -2,6 +2,8 @@
 -export([handle/2, initial_state/2]).
 -include_lib("./defs.hrl").
 
+% http://learnyousomeerlang.com/a-short-visit-to-common-data-structures
+
 %% inititial_state/2 and handle/2 are used togetger with the genserver module,
 %% explained in the lecture about Generic server.
 
@@ -39,9 +41,21 @@ handle(St, {connect, Server}) ->
 	
 
 %% Disconnect from server
+% Send disconnect request to server specified by the serverRef atom in
+% record #client_st of client St (client name).
+% If ok => Update record #client_st
 handle(St, disconnect) ->
-    % {reply, ok, St} ;
-    {reply, {error, not_implemented, "Not implemented"}, St} ;
+%    % {reply, ok, St} ;
+%    {reply, {error, not_implemented, "Not implemented"}, St} ;
+io:fwrite("server: ~p~n", [St#client_st.serverRef]),
+	Response = genserver:request(St#client_st.serverRef, {disconnect, St#client_st.nick}),
+	case Response of
+		ok ->
+			ReplySt = St#client_st{connected = false, serverRef = false},
+			{reply, ok, ReplySt};
+		_ ->
+			{reply, {error, is_connected, "Failed to disconnect"}, St}
+	end;
 
 % Join channel
 handle(St, {join, Channel}) ->
