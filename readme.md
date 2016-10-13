@@ -3,9 +3,11 @@
 - [ ] Leaving a chat room
 - [ ] Writing messages in a chat room
 - [ ] Joining a chat room
-- [/] Disconnecting from the server
-- [/] Connecting to the server
+- [X] Disconnecting from the server
+- [X] Connecting to the server
 
+Todo-further:
+- [ ] Disconnect from chat rooms
 
 
 Connecting to the server
