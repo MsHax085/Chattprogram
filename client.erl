@@ -9,7 +9,7 @@
 
 %% Produce initial state
 initial_state(Nick, GUIName) ->
-    #client_st {gui = GUIName, nick = Nick, connected = false, serverRef = false}.
+    #client_st {gui = GUIName, nick = Nick, connected = false, serverRef = false, channels = []}.
 
 %% ---------------------------------------------------------------------------
 
@@ -59,8 +59,12 @@ handle(St, disconnect) ->
 
 % Join channel
 handle(St, {join, Channel}) ->
-    % {reply, ok, St} ;
-    {reply, {error, not_implemented, "Not implemented"}, St} ;
+	case lists:keysearch(Channel, 1, St#client_st.channels) of
+		false ->
+			io:fwrite("Trying to connect ~p", [Channel]);
+		_ ->
+			{reply, {error, user_in_channel, "User is already connected to channel"}, St}
+		end;
 
 %% Leave channel
 handle(St, {leave, Channel}) ->
