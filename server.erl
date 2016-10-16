@@ -31,17 +31,21 @@ handle(St, {connect, Pid, Nick}) ->
 	end;
 		
 handle(St, {disconnect, Pid, Nick}) ->
-	%% fixar , leave_channels_first, server_not_reached senare
-	io:fwrite("User ~p disconnected from the server and was removed from userlist~n", [Nick]),
-	{reply, ok, St#server_st{clients = dict:erase(Pid, St#server_st.clients)}};
+	case dict:is_key(Pid, St#server_st.clients) of
+		true ->
+			io:fwrite("User ~p disconnected from the server and was removed from userlist~n", [Nick]),
+			{reply, ok, St#server_st{clients = dict:erase(Pid, St#server_st.clients)}};
+		false ->
+			{reply, not_connected, St}
+	end;
 	
 handle(St, {join_channel, Channel}) ->
 	case dict:is_key(Channel, St#server_st.channels) of
 		true ->
-			% Chennel exist
+			% Channel exist
 			{reply, join, St};
 		false ->
 			% Start new channel
 			genserver:start(list_to_atom(Channel), channel:initial_state(Channel), fun channel:handle/2),
-			{reply, join, St#server_st{channels = dict:store(Channel, St#server_st.channels)}}
+			{reply, join, St#server_st{channels = dict:store(Channel, 0, St#server_st.channels)}}
 	end.

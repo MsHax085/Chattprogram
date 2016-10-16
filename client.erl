@@ -44,15 +44,19 @@ handle(St, {connect, Server}) ->
 handle(St, disconnect) ->
 	case St#client_st.connected of
 		true ->
-			Response = genserver:request(St#client_st.serverRef, {disconnect, self(), St#client_st.nick}),
-			case Response of
-				ok ->
-					{reply, ok, St#client_st{connected = false, serverRef = false}};
-				leave_channels_first ->
+			case dict:is_empty(St#client_st.channels) of
+				false ->
 					{reply, {error, leave_channels_first , "Leave all channels first"}, St};
-				_ ->
-					{reply, {error, server_not_reached  , "Server not reached"}, St}
-			end;
+				true ->
+					ServerAtom = list_to_atom(St#client_st.serverRef),
+					Response = genserver:request(ServerAtom, {disconnect, self(), St#client_st.nick}),
+					case Response of
+						ok ->
+							{reply, ok, St#client_st{connected = false, serverRef = false}};
+						_ ->
+							{reply, {error, not_connected  , "Could not disconnect from server"}, St}
+					end
+				end;
 		false ->
 			{reply, {error, user_not_connected, "User not connected"}, St}
 	end;
@@ -74,7 +78,7 @@ handle(St, {join, Channel}) ->
 							{reply, {error, already_in_channel, "User is already in channel!"}, St};
 						ok ->
 							% Add channel to client list
-							{reply, ok, St#client_st{channels = dict:store(Channel, St#client_st.channels)}}
+							{reply, ok, St#client_st{channels = dict:store(Channel, 0, St#client_st.channels)}}
 					end;
 				_ ->
 					{reply, {error, no_connection, "Could not reach server!"}, St}
