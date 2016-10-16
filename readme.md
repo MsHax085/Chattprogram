@@ -2,7 +2,7 @@
 - [X] Asking for the nickname
 - [ ] Leaving a chat room
 - [ ] Writing messages in a chat room
-- [ ] Joining a chat room
+- [X] Joining a chat room
 - [X] Disconnecting from the server
 - [X] Connecting to the server
 
