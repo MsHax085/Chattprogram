@@ -32,7 +32,7 @@ handle(St, {connect, Server}) ->
 			case Response of
 				ok ->
 					{reply, ok, St#client_st{connected = true, serverRef = Server}};
-				_ ->
+				{'EXIT', _} ->
 					{reply, {error, server_not_reached, "Server not reached"}, St}
 			end
 	end;
@@ -53,7 +53,7 @@ handle(St, disconnect) ->
 					case Response of
 						ok ->
 							{reply, ok, St#client_st{connected = false, serverRef = false}};
-						_ ->
+						{'EXIT', _} ->
 							{reply, {error, user_not_connected , "Could not disconnect from server"}, St}
 					end
 				end;
@@ -80,7 +80,7 @@ handle(St, {join, Channel}) ->
 							% Add channel to client list
 							{reply, ok, St#client_st{channels = dict:store(Channel, 0, St#client_st.channels)}}
 					end;
-				_ ->
+				{'EXIT', _} ->
 					{reply, {error, no_connection, "Could not reach server!"}, St}
 			end		
 	end;
@@ -98,19 +98,24 @@ handle(St, {leave, Channel}) ->
 
 % Sending messages
 handle(St, {msg_from_GUI, Channel, Msg}) ->
-    % {reply, ok, St} ;
-    {reply, {error, not_implemented, "Not implemented"}, St} ;
+	ChannelAtom = list_to_atom(Channel),
+	Response = genserver:request(ChannelAtom, {send_msg, self(), St#client_st.nick, Msg}),
+	case Response of
+		ok ->
+			{reply, ok, St};
+		no_user_of_channel ->
+			{reply, {error, user_not_joined, "User has not joined this channel"}, St}
+	end;
 
 %% Get current nick
 handle(St, whoami) ->
-    % {reply, "nick", St} ;
     {reply, St#client_st.nick, St} ;
 
 %% Change nick
 handle(St, {nick, Nick}) ->
 	case St#client_st.connected of
 		true ->
-			{reply, {error, user_already_connected, "You cannot change nickname when connected to a server"}, St};
+			{reply, {error, user_already_connected, "You can not change nickname while connected to a server"}, St};
 		false ->
 			{reply, ok, St#client_st{nick = Nick}}
 	end;
