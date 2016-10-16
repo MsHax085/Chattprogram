@@ -20,11 +20,20 @@ initial_state(ChannelName) ->
 %% and NewState is the new state of the server.
 %% Connect client
 
-handle(St, {join_channel, Nick, Pid}) ->
-	case dict:is_key(Nick, St#channel_st.clients) of
+handle(St, {join_channel, Pid, Nick}) ->
+	case dict:is_key(Pid, St#channel_st.clients) of
 		false ->
 			% Add client to channel
 			{reply, ok, St#channel_st{clients = dict:store(Pid, Nick, St#channel_st.clients)}};
 		true ->
 			{reply, already_in_channel, St}
+	end;
+	
+handle(St, {leave_channel, Pid, Nick}) ->
+	case dict:is_key(Pid, St#channel_st.clients) of
+		true ->
+			% Remove client from channel
+			{reply, ok, St#channel_st{clients = dict:erase(Pid, St#channel_st.clients)}};
+		false ->
+			{reply, no_user_of_channel, St}
 	end.

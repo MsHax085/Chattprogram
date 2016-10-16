@@ -54,7 +54,7 @@ handle(St, disconnect) ->
 						ok ->
 							{reply, ok, St#client_st{connected = false, serverRef = false}};
 						_ ->
-							{reply, {error, not_connected  , "Could not disconnect from server"}, St}
+							{reply, {error, user_not_connected , "Could not disconnect from server"}, St}
 					end
 				end;
 		false ->
@@ -72,10 +72,10 @@ handle(St, {join, Channel}) ->
 			case Response of
 				join ->
 					ChannelAtom = list_to_atom(Channel),
-					Response2 = genserver:request(ChannelAtom, {join_channel, St#client_st.nick, self()}),
+					Response2 = genserver:request(ChannelAtom, {join_channel, self(), St#client_st.nick}),
 					case Response2 of
 						already_in_channel ->
-							{reply, {error, already_in_channel, "User is already in channel!"}, St};
+							{reply, {error, user_already_joined, "User is already in channel!"}, St};
 						ok ->
 							% Add channel to client list
 							{reply, ok, St#client_st{channels = dict:store(Channel, 0, St#client_st.channels)}}
@@ -87,8 +87,14 @@ handle(St, {join, Channel}) ->
 
 %% Leave channel
 handle(St, {leave, Channel}) ->
-    % {reply, ok, St} ;
-    {reply, {error, not_implemented, "Not implemented"}, St} ;
+	ChannelAtom = list_to_atom(Channel),
+	Response = genserver:request(ChannelAtom, {leave_channel, self(), St#client_st.nick}),
+	case Response of
+		ok ->
+			{reply, ok, St#client_st{channels = dict:erase(Channel, St#client_st.channels)}};
+		no_user_of_channel ->
+			{reply, {error, user_not_joined, "User has not joined this channel"}, St}
+	end;
 
 % Sending messages
 handle(St, {msg_from_GUI, Channel, Msg}) ->
@@ -104,7 +110,7 @@ handle(St, whoami) ->
 handle(St, {nick, Nick}) ->
 	case St#client_st.connected of
 		true ->
-			{reply, {error, user_already_connected, "User already connected"}, St};
+			{reply, {error, user_already_connected, "You cannot change nickname when connected to a server"}, St};
 		false ->
 			{reply, ok, St#client_st{nick = Nick}}
 	end;
