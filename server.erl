@@ -43,5 +43,5 @@ handle(St, {join_channel, Channel}) ->
 		false ->
 			% Start new channel
 			genserver:start(list_to_atom(Channel), channel:initial_state(Channel), fun channel:handle/2),
-			{reply, join, St#server_st{channels = [Channel | St#server_st.channels]}}
+			{reply, join, St#server_st{channels = dict:store(Channel, St#server_st.channels)}}
 	end.

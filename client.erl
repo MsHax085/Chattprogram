@@ -9,7 +9,7 @@
 
 %% Produce initial state
 initial_state(Nick, GUIName) ->
-    #client_st {gui = GUIName, nick = Nick, connected = false, serverRef = false, channels = []}.
+    #client_st {gui = GUIName, nick = Nick, connected = false, serverRef = false, channels = dict:new()}.
 
 %% ---------------------------------------------------------------------------
 
@@ -74,7 +74,7 @@ handle(St, {join, Channel}) ->
 							{reply, {error, already_in_channel, "User is already in channel!"}, St};
 						ok ->
 							% Add channel to client list
-							{reply, ok, St#client_st{channels = [Channel | St#client_st.channels]}}
+							{reply, ok, St#client_st{channels = dict:store(Channel, St#client_st.channels)}}
 					end;
 				_ ->
 					{reply, {error, no_connection, "Could not reach server!"}, St}

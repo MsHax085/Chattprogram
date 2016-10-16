@@ -24,7 +24,7 @@ handle(St, {join_channel, Nick, Pid}) ->
 	case dict:is_key(Nick, St#channel_st.clients) of
 		false ->
 			% Add client to channel
-			{reply, ok, St#channel_st{clients = [{Nick, Pid} | St#channel_st.clients]}};
+			{reply, ok, St#channel_st{clients = dict:store(Pid, Nick, St#channel_st.clients)}};
 		true ->
 			{reply, already_in_channel, St}
 	end.
