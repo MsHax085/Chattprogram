@@ -6,7 +6,6 @@
 %% explained in the lecture about Generic server.
 
 % Produce initial state
-% Produce initial state
 initial_state(ServerName) ->
   io:format("Server `~p' created.", [ServerName]),
   #server_st{clients = dict:new(), channels = dict:new()}.
@@ -34,5 +33,15 @@ handle(St, {connect, Pid, Nick}) ->
 handle(St, {disconnect, Pid, Nick}) ->
 	%% fixar , leave_channels_first, server_not_reached senare
 	io:fwrite("User ~p disconnected from the server and was removed from userlist~n", [Nick]),
-	{reply, ok, St#server_st{clients = dict:erase(Pid, St#server_st.clients)}}.
+	{reply, ok, St#server_st{clients = dict:erase(Pid, St#server_st.clients)}};
 	
+handle(St, {join_channel, Channel}) ->
+	case dict:is_key(Channel, St#server_st.channels) of
+		true ->
+			% Chennel exist
+			{reply, join, St};
+		false ->
+			% Start new channel
+			genserver:start(list_to_atom(Channel), channel:initial_state(Channel), fun channel:handle/2),
+			{reply, join, St#server_st{channels = [Channel | St#server_st.channels]}}
+	end.

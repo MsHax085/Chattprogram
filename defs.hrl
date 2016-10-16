@@ -7,3 +7,4 @@
 % This record defines the structure of the server process.
 % Add whatever other fields you need.
 -record(server_st, {clients, channels}).
+-record(channel_st, {clients, channel}).

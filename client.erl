@@ -31,7 +31,7 @@ handle(St, {connect, Server}) ->
 			
 			case Response of
 				ok ->
-					{reply, ok, St#client_st{connected = true, serverRef = ServerAtom}};
+					{reply, ok, St#client_st{connected = true, serverRef = Server}};
 				_ ->
 					{reply, {error, server_not_reached, "Server not reached"}, St}
 			end
@@ -59,12 +59,27 @@ handle(St, disconnect) ->
 
 % Join channel
 handle(St, {join, Channel}) ->
-	case lists:keysearch(Channel, 1, St#client_st.channels) of
+	case St#client_st.connected of
 		false ->
-			io:fwrite("Trying to connect ~p", [Channel]);
+			{reply, {error, not_connected, "Not connected to any server!"}, St};
 		_ ->
-			{reply, {error, user_in_channel, "User is already connected to channel"}, St}
-		end;
+			ServerAtom = list_to_atom(St#client_st.serverRef),
+			Response = genserver:request(ServerAtom, {join_channel, Channel}),
+			case Response of
+				join ->
+					ChannelAtom = list_to_atom(Channel),
+					Response2 = genserver:request(ChannelAtom, {join_channel, St#client_st.nick, self()}),
+					case Response2 of
+						already_in_channel ->
+							{reply, {error, already_in_channel, "User is already in channel!"}, St};
+						ok ->
+							% Add channel to client list
+							{reply, ok, St#client_st{channels = [Channel | St#client_st.channels]}}
+					end;
+				_ ->
+					{reply, {error, no_connection, "Could not reach server!"}, St}
+			end		
+	end;
 
 %% Leave channel
 handle(St, {leave, Channel}) ->
